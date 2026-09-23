@@ -1,0 +1,68 @@
+/* ============================================================
+   HOSTAL DORADO — Impresión de comprobantes y cierres de caja
+   Diseñado para ticketeras térmicas (80 mm / 58 mm) y hoja A4.
+   ============================================================ */
+:root{ --ancho:72mm; --tinta:#111; --suave:#555; --linea:#999; --oro:#9C7A14; }
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{background:#EDE6D8;font-family:"Courier New", ui-monospace, Consolas, monospace;color:var(--tinta);-webkit-font-smoothing:antialiased;}
+
+/* Barra superior (no se imprime) */
+.toolbar{position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:10px 18px;background:#241811;color:#F1E8D6;font-family:system-ui,"Segoe UI",sans-serif;box-shadow:0 4px 18px rgba(0,0,0,.25);}
+.tb-title{display:flex;align-items:center;gap:10px;font-weight:700;font-size:14px;}
+.tb-title img{width:28px;height:28px;}
+.tb-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.tb-size{font-size:12px;display:flex;align-items:center;gap:6px;color:#E8C766;}
+.tb-size select{padding:6px 8px;border-radius:8px;border:1px solid rgba(232,199,102,.35);background:#2E2016;color:#fff;font-size:12.5px;}
+.tb-btn{border:1px solid rgba(241,232,214,.25);background:transparent;color:#F1E8D6;padding:8px 14px;border-radius:9px;font-weight:700;font-size:13px;cursor:pointer;}
+.tb-btn:hover{background:rgba(241,232,214,.08);}
+.tb-primary{background:linear-gradient(135deg,#F3DC92,#D4AF37 50%,#A9851C);color:#241811;border-color:transparent;}
+
+/* Papel */
+.papel{width:var(--ancho);margin:24px auto 40px;background:#fff;padding:5mm 4mm 7mm;box-shadow:0 10px 40px rgba(36,24,17,.2);font-size:11.5px;line-height:1.35;position:relative;overflow:hidden;}
+body.f58{--ancho:54mm;} body.f58 .papel{font-size:10px;padding:3mm 2mm 5mm;}
+body.fa4 .papel{width:190mm;padding:14mm 16mm;font-size:13px;}
+.cargando,.error{text-align:center;color:var(--suave);font-family:system-ui,sans-serif;}
+.error{color:#B03A3A;}
+
+.c{text-align:center;}
+.r{text-align:right;}
+.b{font-weight:700;}
+.logo{width:18mm;height:18mm;margin:0 auto 2mm;display:block;filter:grayscale(1) contrast(1.2);}
+body.fa4 .logo{width:24mm;height:24mm;}
+.emisor-nombre{font-size:1.45em;font-weight:700;letter-spacing:.04em;margin:0;}
+.emisor-dato{margin:.5mm 0;font-size:.92em;}
+.sep{border:0;border-top:1px dashed var(--linea);margin:2.5mm 0;}
+.sep-doble{border:0;border-top:3px double var(--tinta);margin:2.5mm 0;}
+.doc-box{border:1.5px solid var(--tinta);padding:2mm;margin:3mm 0;text-align:center;}
+.doc-box .doc-tipo{font-weight:700;font-size:1.1em;letter-spacing:.06em;}
+.doc-box .doc-num{font-weight:700;font-size:1.25em;letter-spacing:.08em;margin-top:.5mm;}
+.fila{display:flex;justify-content:space-between;gap:3mm;margin:.6mm 0;}
+.fila span:last-child{text-align:right;}
+.etq{color:var(--suave);}
+.total-grande{font-size:1.35em;font-weight:700;}
+
+table{width:100%;border-collapse:collapse;font-size:1em;}
+th{font-size:.85em;text-align:left;border-bottom:1px solid var(--tinta);padding:1mm 0;}
+td{padding:.8mm 0;vertical-align:top;}
+th.r,td.r{text-align:right;}
+.item-desc{padding-bottom:0;}
+.item-num td{padding-top:0;color:var(--suave);}
+
+.seccion{font-weight:700;letter-spacing:.08em;margin:3mm 0 1mm;font-size:.95em;}
+.firmas{display:flex;gap:6mm;margin-top:12mm;}
+.firmas div{flex:1;border-top:1px solid var(--tinta);padding-top:1mm;text-align:center;font-size:.85em;}
+.pie{margin-top:3mm;text-align:center;font-size:.9em;}
+.nota{font-size:.8em;color:var(--suave);text-align:center;margin-top:2mm;}
+.estado-diff{display:inline-block;padding:.5mm 2mm;border:1.5px solid var(--tinta);font-weight:700;}
+
+.anulado::before{content:"ANULADO";position:absolute;top:40%;left:50%;transform:translate(-50%,-50%) rotate(-28deg);font-size:15mm;font-weight:700;color:rgba(176,58,58,.22);border:1.2mm solid rgba(176,58,58,.22);padding:1mm 4mm;letter-spacing:.1em;pointer-events:none;font-family:system-ui,sans-serif;}
+
+@media print{
+  body{background:#fff;}
+  .no-print{display:none !important;}
+  .papel{margin:0;box-shadow:none;width:100%;}
+  body.f80 .papel,body.f58 .papel{padding-top:2mm;}
+  body.fa4{--ancho:auto;}
+  body.fa4 .papel{padding:0;}
+}

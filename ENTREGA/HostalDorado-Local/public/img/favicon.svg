@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Hostal Dorado">
+<defs><linearGradient id="hdg" x1="0" y1="0" x2="1" y2="1">
+<stop offset="0" stop-color="#F6E3A1"/><stop offset=".45" stop-color="#D4AF37"/><stop offset="1" stop-color="#9C7A14"/></linearGradient></defs>
+<circle cx="32" cy="32" r="31" fill="#241811"/>
+<circle cx="32" cy="32" r="29.5" fill="none" stroke="url(#hdg)" stroke-width="2.2"/>
+<circle cx="32" cy="32" r="25.8" fill="none" stroke="url(#hdg)" stroke-width=".7" opacity=".55"/>
+<g stroke="url(#hdg)" stroke-width="1.6" stroke-linecap="round"><line x1="21.50" y1="28.00" x2="17.00" y2="28.00"/><line x1="22.30" y1="23.98" x2="18.14" y2="22.26"/><line x1="24.58" y1="20.58" x2="21.39" y2="17.39"/><line x1="27.98" y1="18.30" x2="26.26" y2="14.14"/><line x1="32.00" y1="17.50" x2="32.00" y2="13.00"/><line x1="36.02" y1="18.30" x2="37.74" y2="14.14"/><line x1="39.42" y1="20.58" x2="42.61" y2="17.39"/><line x1="41.70" y1="23.98" x2="45.86" y2="22.26"/><line x1="42.50" y1="28.00" x2="47.00" y2="28.00"/></g>
+<circle cx="32" cy="28" r="7.5" fill="url(#hdg)"/>
+<path d="M11.5 44 L25.2 30.6 Q32 25.6 38.8 30.6 L52.5 44 Z" fill="url(#hdg)"/>
+<path d="M25.2 30.6 Q32 25.6 38.8 30.6 L36.2 33.2 L33.6 31.4 L31.4 33.6 L28.8 31.6 Z" fill="#FAF6EE"/>
+<path d="M16 47.5 H48" stroke="url(#hdg)" stroke-width="1.6" stroke-linecap="round"/>
+<path d="M21 50.8 H43" stroke="url(#hdg)" stroke-width="1" stroke-linecap="round" opacity=".7"/>
+</svg>

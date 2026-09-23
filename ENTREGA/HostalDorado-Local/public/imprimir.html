@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Imprimir · Hostal Dorado</title>
+<link rel="icon" type="image/svg+xml" href="/img/favicon.svg">
+<link rel="stylesheet" href="/css/ticket.css">
+</head>
+<body>
+  <div class="toolbar no-print">
+    <div class="tb-title"><img src="/img/logo.svg" alt=""> <span id="tb-titulo">Vista de impresión</span></div>
+    <div class="tb-actions">
+      <label class="tb-size">Formato
+        <select id="formato">
+          <option value="80">Ticket 80 mm</option>
+          <option value="58">Ticket 58 mm</option>
+          <option value="a4">Hoja A4</option>
+        </select>
+      </label>
+      <button id="btn-imprimir" class="tb-btn tb-primary">Imprimir</button>
+      <button id="btn-cerrar" class="tb-btn">Cerrar</button>
+    </div>
+  </div>
+  <main id="papel" class="papel"><p class="cargando">Cargando…</p></main>
+  <script src="/js/imprimir.js"></script>
+</body>
+</html>
