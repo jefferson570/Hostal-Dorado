@@ -1,0 +1,37 @@
+# render.yaml
+# ---------------------------------------------------------------
+# Esto es un "Blueprint" de Render: un archivo que describe cómo
+# desplegar el proyecto para que Render configure todo solo (plan,
+# comandos, variables de entorno y el disco persistente) en vez de
+# que tengas que llenar cada campo a mano en el panel web.
+#
+# Cómo se usa: en Render, "New +" → "Blueprint" → conecta este
+# repositorio. Render detecta este archivo automáticamente.
+services:
+  - type: web
+    name: hostal-dorado
+    runtime: node
+    plan: starter          # el plan gratuito de Render NO admite disco persistente
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: TZ
+        value: America/Lima
+      - key: ADMIN_PASSWORD
+        generateValue: true   # contraseña inicial aleatoria: la ves en Environment de Render
+      - key: RECEPCION_PASSWORD
+        generateValue: true
+      - key: JWT_SECRET
+        generateValue: true   # Render genera una clave secreta aleatoria y segura por ti
+      - key: JWT_EXPIRES_IN
+        value: 8h
+      - key: DB_PATH
+        value: /var/data/hostal.db   # dentro del disco persistente definido abajo
+      - key: BACKUP_DIR
+        value: /var/data/respaldos   # respaldos diarios automáticos, también en el disco
+    disk:
+      name: hostal-data
+      mountPath: /var/data
+      sizeGB: 1

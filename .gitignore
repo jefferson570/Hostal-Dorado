@@ -1,0 +1,16 @@
+node_modules/
+.env
+google-service-account*.json
+data/*.db
+data/*.db-journal
+data/*.db-shm
+data/*.db-wal
+npm-debug.log
+.codegraph/
+.opencode/
+data/respaldos/
+data/*.log
+# Originales de fotos (respaldo local y pesado; las optimizadas están en public-site/img/fotos)
+herramientas/fotos-originales/
+# Configuración local del editor
+.claude/

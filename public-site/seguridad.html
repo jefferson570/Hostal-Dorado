@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Política de seguridad · Hostal Dorado</title>
+<meta name="description" content="Cómo protege Hostal Dorado la información de sus huéspedes y cómo reportar un problema de seguridad.">
+<meta name="theme-color" content="#241811">
+<link rel="icon" type="image/svg+xml" href="/img/favicon.svg">
+<link rel="stylesheet" href="/sitio/css/style.css">
+</head>
+<body>
+<a class="skip-link" href="#contenido">Saltar al contenido</a>
+
+<header class="site-header solid" id="site-header">
+  <a href="/" class="brand" aria-label="Hostal Dorado, inicio">
+    <img class="brand-emblem" src="/img/logo.svg" alt="" width="40" height="40">
+    <span class="brand-text">Hostal Dorado<small>Arequipa · Perú</small></span>
+  </a>
+  <button class="nav-toggle" id="nav-toggle" aria-label="Abrir menú" aria-expanded="false" aria-controls="site-nav"><span></span><span></span><span></span></button>
+  <nav class="site-nav" id="site-nav" aria-label="Principal">
+    <a href="/#habitaciones">Habitaciones</a>
+    <a href="/#como-reservar">Cómo reservar</a>
+    <a href="/#ubicacion">Ubicación</a>
+    <a class="header-cta" href="/#reservar">Ver disponibilidad</a>
+  </nav>
+</header>
+
+<main id="contenido">
+  <div class="legal-hero">
+    <div class="wrap">
+      <h1>Política de seguridad</h1>
+      <p>Qué hacemos para proteger tu información y qué puedes hacer tú.</p>
+    </div>
+  </div>
+
+  <article class="legal">
+    <section class="legal-resumen" aria-labelledby="resumen">
+      <h2 id="resumen">Aviso importante contra estafas</h2>
+      <ul>
+        <li>Hostal Dorado <b>no cobra por adelantado</b> las pre-reservas hechas en la web.</li>
+        <li><b>Nunca</b> te pediremos contraseñas, códigos de verificación ni datos de tarjeta por WhatsApp, correo o teléfono.</li>
+        <li>Nuestros únicos números oficiales son el WhatsApp <b data-dato="whatsapp"></b> y el teléfono <b data-dato="llamadas"></b>.</li>
+      </ul>
+    </section>
+
+    <h2>1. Cómo protegemos la información</h2>
+    <h3>En el sitio web</h3>
+    <ul>
+      <li><b>Conexión cifrada (HTTPS)</b> entre tu navegador y nuestro servidor.</li>
+      <li><b>Datos mínimos:</b> la web solo pide nombre y un medio de contacto. No pide documentos ni pagos.</li>
+      <li><b>Borrado automático:</b> los datos de las pre-reservas se eliminan a los 90 días de la estadía.</li>
+      <li><b>Protección contra abusos:</b> límite de solicitudes por visitante y validación de todos los datos en el servidor.</li>
+      <li><b>Política de seguridad de contenido (CSP):</b> el navegador solo ejecuta código de nuestro propio servidor.</li>
+      <li><b>Sin rastreadores:</b> no hay publicidad ni analítica, y el mapa de Google solo se carga si lo permites.</li>
+    </ul>
+    <h3>En el sistema interno del hostal</h3>
+    <ul>
+      <li>Cada trabajador entra con <b>su propio usuario y contraseña</b>. Las contraseñas se guardan cifradas y nunca en texto legible.</li>
+      <li><b>Permisos por rol:</b> recepción solo ve lo que necesita para atender. La administración tiene acceso completo.</li>
+      <li><b>Bloqueo ante intentos fallidos</b> de ingreso y cierre automático de sesión a las 8 horas.</li>
+      <li>Al cambiar una contraseña, se cierran las sesiones abiertas con la anterior.</li>
+      <li><b>Copias de seguridad diarias</b> de la base de datos, conservadas 30 días.</li>
+    </ul>
+
+    <h2>2. Qué puedes hacer tú</h2>
+    <ul>
+      <li>Verifica que la dirección del sitio sea la correcta y que el navegador muestre el candado de conexión segura.</li>
+      <li>Guarda tu código de reserva y compártelo solo con el hostal.</li>
+      <li>Si recibes un mensaje sospechoso en nombre del hostal, no respondas con datos personales y avísanos.</li>
+    </ul>
+
+    <h2 id="reportar">3. Reportar un problema de seguridad</h2>
+    <p>Si encontraste una falla de seguridad en este sitio, escríbenos por WhatsApp al <b data-dato="whatsapp"></b> con el asunto «Seguridad». Describe el problema y cómo reproducirlo. Te pedimos:</p>
+    <ul>
+      <li>No acceder, modificar ni borrar datos de otras personas.</li>
+      <li>No afectar el funcionamiento del sitio (sin pruebas de carga ni de denegación de servicio).</li>
+      <li>Darnos un tiempo razonable para corregirlo antes de hacerlo público.</li>
+    </ul>
+    <p>Esta información también está disponible en formato estándar en <a href="/.well-known/security.txt">/.well-known/security.txt</a>.</p>
+
+    <h2>4. Si ocurre un incidente</h2>
+    <p>Si un incidente afectara tus datos personales, lo investigaremos, tomaremos medidas para contenerlo y te informaremos a ti y a la Autoridad Nacional de Protección de Datos Personales cuando corresponda, como indica la ley.</p>
+
+    <p class="legal-actualizado">Versión vigente desde el 25 de septiembre de 2026. Consulta también la <a href="/privacidad">Política de privacidad</a>.</p>
+  </article>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <div class="footer-brand">
+      <img src="/img/logo.svg" alt="" width="44" height="44">
+      <div><b>Hostal Dorado</b><span>Cayma · Arequipa · Perú</span></div>
+    </div>
+    <nav class="footer-links" aria-label="Información legal">
+      <a href="/privacidad">Privacidad</a>
+      <a href="/cookies">Cookies</a>
+      <a href="/terminos">Términos y condiciones</a>
+      <a href="/seguridad" aria-current="page">Seguridad</a>
+      <button type="button" class="link-btn" data-abrir-cookies>Configurar cookies</button>
+    </nav>
+    <p class="footer-copy">© <span data-anio></span> Hostal Dorado. <a href="/panel">Acceso del personal</a></p>
+  </div>
+</footer>
+
+<div id="toast" role="status" aria-live="polite"></div>
+<script src="/sitio/js/comun.js"></script>
+</body>
+</html>

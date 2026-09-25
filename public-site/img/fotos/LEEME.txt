@@ -1,0 +1,24 @@
+FOTOS REALES DEL HOSTAL
+=======================
+
+Coloca aquí las fotos con ESTOS nombres exactos (en minúsculas, .jpg):
+
+  suite.jpg           Suite (cama con sillón de descanso y espejo)
+  departamento.jpg    Departamento (cocina equipada)
+  estandar-plus.jpg   Estándar Plus (cama grande con sofá y ventanal)
+  estandar.jpg        Estándar (cama con repisas de madera)
+  pasillo.jpg         Pasillo (extintor y señal de salida)
+  familiar.jpg        Familiar          (opcional, cuando tengas foto)
+  ducha.jpg           Ducha eléctrica   (opcional, cuando tengas foto)
+
+- Si una foto no existe, el sitio muestra una ilustración en su lugar.
+- La galería "Así es el hostal" solo aparece si hay al menos una foto.
+- lobby.jpg es la foto de portada del sitio.
+- Para optimizar fotos nuevas (tamaño, peso y orientación), déjalas aquí y
+  ejecuta desde la carpeta del proyecto:
+    powershell -ExecutionPolicy Bypass -File herramientas\optimizar-fotos.ps1
+  Los originales quedan guardados en herramientas\fotos-originales.
+- Ojo: Windows oculta la extensión. Al renombrar escribe solo "suite",
+  no "suite.jpg", o quedará "suite.jpg.jpg".
+- Qué foto va con qué tipo de habitación se edita en
+  public-site/js/app.js (secciones HABITACIONES y GALERIA).
