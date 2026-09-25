@@ -140,6 +140,19 @@ app.get('/.well-known/security.txt', (req, res) => {
   res.type('text/plain').sendFile(path.join(SITIO, 'security.txt'));
 });
 
+/* Para buscadores (Google): qué indexar y el mapa del sitio. Se arman con
+   el dominio de la petición, así sirven igual en onrender.com o en un
+   dominio propio. El panel del personal queda fuera de los buscadores. */
+const PAGINAS_PUBLICAS = ['/', '/privacidad', '/cookies', '/terminos', '/seguridad'];
+const baseUrl = req => `${req.protocol}://${req.get('host')}`;
+app.get('/robots.txt', (req, res) => {
+  res.type('text/plain').send(`User-agent: *\nAllow: /\nDisallow: /panel\nDisallow: /api/\n\nSitemap: ${baseUrl(req)}/sitemap.xml\n`);
+});
+app.get('/sitemap.xml', (req, res) => {
+  const urls = PAGINAS_PUBLICAS.map(p => `  <url><loc>${baseUrl(req)}${p}</loc></url>`).join('\n');
+  res.type('application/xml').send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`);
+});
+
 app.get('/', (req, res) => res.sendFile(path.join(SITIO, 'index.html')));
 app.get(/^\/(privacidad|cookies|terminos|seguridad)\/?$/, (req, res) => {
   res.sendFile(path.join(SITIO, `${req.params[0]}.html`));
