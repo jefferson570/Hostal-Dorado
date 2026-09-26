@@ -16,7 +16,8 @@ const DATOS_SITIO = {
   whatsappVisible: '973 139 491',
   llamadas: '+51940974453',
   llamadasVisible: '940 974 453',
-  horario: 'Lunes a domingo · 7:00 a 22:00',
+  horario: 'Las 24 horas, todos los días',
+  facebook: 'https://www.facebook.com/profile.php?id=61594460704580',
   mapsLink: 'https://maps.app.goo.gl/GQJ4ZktxatxLCnJ49',
   mapsEmbed: 'https://www.google.com/maps?q=-16.3424305,-71.5441207&z=17&hl=es&output=embed',
 };
@@ -37,6 +38,7 @@ const LINKS = {
   whatsapp: waLink('Hola Hostal Dorado, quisiera información sobre una habitación.'),
   llamadas: 'tel:' + DATOS_SITIO.llamadas,
   maps: DATOS_SITIO.mapsLink,
+  facebook: DATOS_SITIO.facebook,
 };
 $$('[data-link]').forEach(el => { el.href = LINKS[el.dataset.link]; });
 $$('[data-anio]').forEach(el => { el.textContent = new Date().getFullYear(); });
