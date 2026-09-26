@@ -22,6 +22,19 @@ function movement(producto_id, tipo, cantidad, motivo, userId, extra = {}) {
   });
 }
 
+/* Respaldo en Google Sheets, pestaña "Inventario": una fila por movimiento.
+   Columnas: Fecha | Hora | Movimiento | Producto | Categoría | Cantidad |
+   Stock final | Precio venta | Costo | Detalle | Registrado por */
+function respaldoInventario(req, movimiento, product, cantidad, stockFinal, detalle = '') {
+  const ahora = new Date();
+  sheets.appendRow('Inventario', [
+    today(), ahora.toTimeString().slice(0, 5), movimiento,
+    product.nombre, product.categoria || '', cantidad, stockFinal,
+    Number(product.precio) || 0, Number(product.costo) || 0,
+    detalle, req.user.nombre || req.user.username,
+  ]);
+}
+
 function list(req, res) {
   const rows = db.prepare('SELECT * FROM inventory WHERE activo = 1 ORDER BY nombre ASC').all();
   res.json({ inventory: rows });
@@ -51,6 +64,7 @@ function create(req, res) {
       }
     })();
     const actualizado = findActive.get(existente.id);
+    if (stockNum > 0) respaldoInventario(req, 'Reposición', actualizado, stockNum, actualizado.stock, 'Ingreso de stock a producto existente');
     realtime.broadcast('inventory:changed', { reason: 'restock-existing' });
     return res.status(200).json({
       product: actualizado,
@@ -66,8 +80,10 @@ function create(req, res) {
         .run(String(nombre).trim(), categoria || null, stockNum, parseInt(stock_minimo, 10) || 0, Number(precio), Number(costo) || 0, existente.id);
       if (stockNum > 0) movement(existente.id, 'ajuste', stockNum, 'Producto reactivado en el catálogo', req.user.sub);
     })();
+    const reactivado = findActive.get(existente.id);
+    respaldoInventario(req, 'Alta', reactivado, stockNum, reactivado.stock, 'Producto reactivado en el catálogo');
     realtime.broadcast('inventory:changed', { reason: 'reactivate' });
-    return res.status(201).json({ product: findActive.get(existente.id), yaExistia: false });
+    return res.status(201).json({ product: reactivado, yaExistia: false });
   }
 
   const row = {
@@ -80,6 +96,7 @@ function create(req, res) {
     VALUES (@id, @nombre, @categoria, @stock, @stock_minimo, @precio, @costo, @created_at)
   `).run(row);
 
+  respaldoInventario(req, 'Alta', row, stockNum, stockNum, 'Producto nuevo');
   realtime.broadcast('inventory:changed', { reason: 'create' });
   res.status(201).json({ product: row, yaExistia: false });
 }
@@ -112,6 +129,7 @@ function remove(req, res) {
   const product = findActive.get(req.params.id);
   if (!product) return res.status(404).json({ error: 'Producto no encontrado o ya eliminado.' });
   db.prepare('UPDATE inventory SET activo = 0 WHERE id = ?').run(product.id);
+  respaldoInventario(req, 'Baja', product, 0, product.stock, 'Eliminado del catálogo');
   realtime.broadcast('inventory:changed', { reason: 'delete' });
   res.json({ ok: true });
 }
@@ -170,6 +188,7 @@ function sell(req, res) {
   realtime.broadcast('inventory:changed', { reason: 'sale' });
   realtime.broadcast('finance:changed', { reason: 'sale' });
   sheets.appendRow('Finanzas', [today(), `Venta: ${product.nombre} x${cantidad}`, 'ingreso', monto, pagos.map(p => `${p.metodo} ${p.monto.toFixed(2)}`).join(' + '), nowISO()]);
+  respaldoInventario(req, 'Venta', product, -cantidad, product.stock - cantidad, `Cobrado S/ ${monto.toFixed(2)} (${pagos.map(p => p.metodo).join(' + ')})`);
   res.json({ ok: true, nuevoStock: product.stock - cantidad, monto, pagos, comprobante });
 }
 
@@ -185,10 +204,11 @@ function adjust(req, res) {
     if (product.stock + delta < 0) return { status: 409, error: 'El ajuste dejaría el stock en negativo.' };
     db.prepare('UPDATE inventory SET stock = stock + ? WHERE id = ?').run(delta, product.id);
     movement(product.id, 'ajuste', delta, motivo, req.user.sub);
-    return { nuevoStock: product.stock + delta };
+    return { product, nuevoStock: product.stock + delta };
   })();
 
   if (resultado.error) return res.status(resultado.status).json({ error: resultado.error });
+  respaldoInventario(req, delta > 0 ? 'Reposición' : 'Ajuste', resultado.product, delta, resultado.nuevoStock, motivo);
   realtime.broadcast('inventory:changed', { reason: 'adjust' });
   res.json({ ok: true, nuevoStock: resultado.nuevoStock });
 }

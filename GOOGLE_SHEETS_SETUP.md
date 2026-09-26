@@ -14,13 +14,16 @@ Google — pero es gratis, sin límites relevantes para un hostal.
 
 1. Ve a [sheets.google.com](https://sheets.google.com) y crea una hoja
    nueva. Ponle de nombre, por ejemplo, **"Hostal Dorado — Respaldo"**.
-2. Dentro, crea dos pestañas (clic derecho en la pestaña de abajo → "Cambiar nombre"):
+2. Dentro, crea tres pestañas (clic derecho en la pestaña de abajo → "Cambiar nombre"):
    - `Huéspedes`
    - `Finanzas`
+   - `Inventario`
 3. En la fila 1 de `Huéspedes`, escribe estos encabezados (uno por celda):
    `Tipo doc | N° doc | Nombres | Apellidos | Nacionalidad | Procedencia | Destino | Teléfono | Habitación | Check-in | Noches | Precio/noche | Registrado`
 4. En la fila 1 de `Finanzas`:
    `Fecha | Concepto | Tipo | Monto | Método | Registrado`
+   En la fila 1 de `Inventario` (una fila por alta, reposición, ajuste, venta o baja):
+   `Fecha | Hora | Movimiento | Producto | Categoría | Cantidad | Stock final | Precio venta | Costo | Detalle | Registrado por`
 5. Copia el **ID de la hoja** desde la URL del navegador. Por ejemplo, si
    la URL es `https://docs.google.com/spreadsheets/d/1AbCdEfGhIjKlMnOp/edit`,
    el ID es `1AbCdEfGhIjKlMnOp`.
