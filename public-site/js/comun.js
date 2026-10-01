@@ -35,7 +35,7 @@ const TEXTOS = {
 };
 $$('[data-dato]').forEach(el => { el.textContent = TEXTOS[el.dataset.dato] || ''; });
 const LINKS = {
-  whatsapp: waLink('Hola Hostal Dorado, quisiera información sobre una habitación.'),
+  whatsapp: waLink('Hola Hostal El Dorado, quisiera información sobre una habitación.'),
   llamadas: 'tel:' + DATOS_SITIO.llamadas,
   maps: DATOS_SITIO.mapsLink,
   facebook: DATOS_SITIO.facebook,
@@ -226,7 +226,7 @@ function cargarMapa(box){
   if (box.querySelector('iframe')) return;
   box.innerHTML = '';
   const f = document.createElement('iframe');
-  f.title = 'Mapa: ubicación de Hostal Dorado';
+  f.title = 'Mapa: ubicación de Hostal El Dorado';
   f.loading = 'lazy';
   f.referrerPolicy = 'no-referrer-when-downgrade';
   f.src = DATOS_SITIO.mapsEmbed;

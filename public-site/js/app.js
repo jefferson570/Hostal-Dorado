@@ -213,7 +213,7 @@ function abrirModal(tipo, precio){
         <p class="field-hint" id="pr-contacto-ayuda">Basta con uno de los dos para poder confirmarte.</p>
         <label class="check">
           <input type="checkbox" id="pr-acepto" required>
-          <span>Acepto que Hostal Dorado use estos datos solo para gestionar mi reserva, según la <a href="/privacidad" target="_blank" rel="noopener">Política de privacidad</a> y los <a href="/terminos" target="_blank" rel="noopener">Términos</a>.</span>
+          <span>Acepto que Hostal El Dorado use estos datos solo para gestionar mi reserva, según la <a href="/privacidad" target="_blank" rel="noopener">Política de privacidad</a> y los <a href="/terminos" target="_blank" rel="noopener">Términos</a>.</span>
         </label>
         <p class="field-error" id="pr-error" role="alert"></p>
         <p class="modal-note">Es una <b>pre-reserva sin costo</b>. Recepción la confirma por WhatsApp o correo y pagas al llegar. Tus datos se eliminan 90 días después de tu estadía.</p>
@@ -271,7 +271,7 @@ async function enviarPreReserva(){
       const detalle = (data.detalles || []).map(d => d.mensaje)[0];
       throw new Error(detalle || data.error || 'No se pudo registrar la pre-reserva.');
     }
-    const msgWa = `Hola, hice una pre-reserva en Hostal Dorado (código ${data.codigo}): ${seleccion.tipo}, llegada el ${seleccion.fecha} a las ${hh(seleccion.hora)}. ¿Me la confirman?`;
+    const msgWa = `Hola, hice una pre-reserva en Hostal El Dorado (código ${data.codigo}): ${seleccion.tipo}, llegada el ${seleccion.fecha} a las ${hh(seleccion.hora)}. ¿Me la confirman?`;
     dlg.innerHTML = `
       <button type="button" class="modal-close on-light" data-cerrar aria-label="Cerrar">${iconoCerrar}</button>
       <div class="success">
