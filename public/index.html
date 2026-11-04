@@ -28,7 +28,12 @@
      ============================================================ -->
 <div id="login-screen">
   <div id="login-hero">
-    <div class="hero-bg" style="background-image:url('/img/lobby.jpg')"></div>
+    <div class="hero-bg">
+      <video class="hero-video" autoplay muted loop playsinline preload="metadata" poster="/img/lobby.jpg">
+        <source src="/img/HeroElDorado-720.mp4" type="video/mp4" media="(max-width: 860px)">
+        <source src="/img/HeroElDorado-1080.mp4" type="video/mp4">
+      </video>
+    </div>
     <div class="hero-top">
       <img src="/img/logo.svg" alt="">
       <span>Hostal Dorado<small>AREQUIPA · PERÚ</small></span>

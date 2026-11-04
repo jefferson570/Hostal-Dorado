@@ -90,7 +90,8 @@ body.ready #boot{opacity:0;visibility:hidden;}
   #login-hero{min-height:260px;padding:28px !important;}
 }
 #login-hero{position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between;padding:44px 52px;color:#fff;background:var(--walnut-900);}
-#login-hero .hero-bg{position:absolute;inset:-4%;background-size:cover;background-position:center;animation:kenburns 26s ease-in-out infinite alternate;}
+#login-hero .hero-bg{position:absolute;inset:0;overflow:hidden;background:url('/img/lobby.jpg') center/cover;animation:kenburns 26s ease-in-out infinite alternate;}
+#login-hero .hero-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border:0;}
 #login-hero::before{content:"";position:absolute;inset:0;z-index:1;background:linear-gradient(180deg, rgba(23,15,10,.55) 0%, rgba(28,18,12,.25) 35%, rgba(20,13,8,.94) 100%);}
 #login-hero::after{content:"";position:absolute;inset:0;z-index:1;background:radial-gradient(600px 300px at 20% 100%, rgba(201,162,39,.28), transparent 70%);}
 @keyframes kenburns{from{transform:scale(1) translate(0,0);}to{transform:scale(1.12) translate(-2%,-2%);}}
@@ -594,6 +595,7 @@ td small{white-space:nowrap;}
 /* Accesibilidad: quien prefiere menos movimiento no ve animaciones */
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important;scroll-behavior:auto !important;}
+  .hero-video{display:none !important;}
 }
 
 /* ============================================================

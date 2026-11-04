@@ -58,6 +58,7 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'"],
       fontSrc: ["'self'"],
       imgSrc: ["'self'", 'data:', 'blob:'],
+      mediaSrc: ["'self'"],
       connectSrc: ["'self'"],
       // Único tercero embebido: el mapa de Google, y solo tras el consentimiento.
       frameSrc: ['https://www.google.com', 'https://maps.google.com'],
