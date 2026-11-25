@@ -343,6 +343,7 @@ El hostal cobra **antes** de que el huésped ingrese, así que el cobro se hace 
 
 - En el **check-out** de una estancia ya pagada no se cobra de nuevo: solo se confirma la salida. Si el huésped se quedó más tiempo, se ingresan los bloques/noches adicionales y se cobran en ese momento.
 - Lo pagado por adelantado no se devuelve ni se reduce desde el sistema.
+- El **cierre de turno es individual**: cada empleado cierra su propio turno y el cierre (y su "Dar reporte") incluye solo lo que **él** registró desde su último cierre. El **cierre general** del administrador sigue sumando a todos.
 - Las estancias que ya estaban abiertas antes de este cambio siguen mostrando "Pago pendiente" y se cobran al salir, como antes.
 
 ---

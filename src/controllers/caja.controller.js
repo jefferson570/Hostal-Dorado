@@ -12,8 +12,10 @@
  *     comprobantes emitidos/anulados en el periodo.
  *
  * Hay dos tipos de cierre:
- *   - TURNO: lo hace recepción al terminar su turno. Cubre desde el
- *     último cierre (de cualquier tipo) hasta ahora.
+ *   - TURNO: lo hace CADA empleado al terminar su turno y es solo suyo:
+ *     cubre lo que ÉL registró desde su último cierre de turno (o desde el
+ *     último cierre general, si fue más reciente) hasta ahora. Los demás
+ *     empleados no se mezclan.
  *   - GENERAL: la liquidación que pide la dueña ("saquemos cuentas hasta
  *     hoy"). Solo administrador. Cubre desde el último cierre GENERAL,
  *     incluye todos los turnos intermedios y deja en CERO los totales de
@@ -36,20 +38,46 @@ function ultimoCierre() {
 function ultimoGeneral() {
   return db.prepare("SELECT * FROM cierres_caja WHERE tipo = 'general' ORDER BY numero DESC LIMIT 1").get() || null;
 }
-/** Desde dónde se cuenta un cierre de ese tipo. */
-function inicioPeriodo(tipo) {
-  const ult = tipo === 'general' ? ultimoGeneral() : ultimoCierre();
-  return { ult, desde: ult ? ult.hasta : INICIO };
+/**
+ * Punto de partida de los cierres INDIVIDUALES. Antes de que cada empleado
+ * cerrara su propio turno, los cierres eran compartidos y ya cubrían todo lo
+ * anterior a este cambio; para no contar dos veces, el primer turno de cada
+ * empleado arranca en el último cierre que existía al activarse esto.
+ */
+function pisoIndividual() {
+  const f = db.prepare("SELECT valor FROM ajustes WHERE clave = 'cierre_individual_desde'").get();
+  if (f) return f.valor;
+  const u = ultimoCierre();
+  const v = u ? u.hasta : INICIO;
+  db.prepare("INSERT OR IGNORE INTO ajustes (clave, valor) VALUES ('cierre_individual_desde', ?)").run(v);
+  return v;
+}
+/**
+ * Desde dónde se cuenta un cierre de ese tipo.
+ *   - general: desde el último cierre general (todos los empleados).
+ *   - turno:   desde el último cierre de ESE empleado (o el último general, si es más reciente).
+ */
+function inicioPeriodo(tipo, userId) {
+  if (tipo === 'general' || !userId) {
+    const ult = tipo === 'general' ? ultimoGeneral() : ultimoCierre();
+    return { ult, desde: ult ? ult.hasta : INICIO };
+  }
+  const ult = db.prepare(`SELECT * FROM cierres_caja WHERE tipo = 'general' OR created_by = ? ORDER BY numero DESC LIMIT 1`).get(userId) || null;
+  const piso = pisoIndividual();
+  const desde = ult && ult.hasta > piso ? ult.hasta : piso;
+  return { ult: ult && ult.hasta >= desde ? ult : null, desde };
 }
 const contarTurnos = desde => db.prepare("SELECT COUNT(*) AS n FROM cierres_caja WHERE tipo = 'turno' AND hasta > ?").get(desde).n;
 
-function calcular(desde, hasta, fondoInicial, efectivoContado) {
+function calcular(desde, hasta, fondoInicial, efectivoContado, userId) {
+  // userId = cierre de TURNO de un empleado: solo cuenta lo que él registró. Sin userId (cierre general): todos.
+  const solo = userId ? ' AND f.created_by = ?' : '';
   const movs = db.prepare(`
     SELECT f.id, f.fecha, f.concepto, f.tipo, f.monto, f.metodo, f.referencia_estancia_id, f.created_at, u.nombre AS usuario
     FROM finance f LEFT JOIN users u ON u.id = f.created_by
-    WHERE f.created_at > ? AND f.created_at <= ?
+    WHERE f.created_at > ? AND f.created_at <= ?${solo}
     ORDER BY f.created_at ASC
-  `).all(desde, hasta);
+  `).all(...(userId ? [desde, hasta, userId] : [desde, hasta]));
   const pagos = pagosPorMovimiento(db, movs.map(m => m.id));
 
   const porMetodo = Object.fromEntries(METODOS.map(m => [m, { ingresos: 0, egresos: 0, neto: 0 }]));
@@ -86,9 +114,9 @@ function calcular(desde, hasta, fondoInicial, efectivoContado) {
 
   const comps = db.prepare(`
     SELECT tipo, estado, COUNT(*) AS cantidad, COALESCE(SUM(total), 0) AS total
-    FROM comprobantes WHERE created_at > ? AND created_at <= ?
+    FROM comprobantes WHERE created_at > ? AND created_at <= ?${userId ? ' AND created_by = ?' : ''}
     GROUP BY tipo, estado
-  `).all(desde, hasta);
+  `).all(...(userId ? [desde, hasta, userId] : [desde, hasta]));
   const comprobantes = { boletas: 0, facturas: 0, total_emitido: 0, anulados: 0 };
   for (const c of comps) {
     if (c.estado === 'anulado') { comprobantes.anulados += c.cantidad; continue; }
@@ -126,9 +154,10 @@ function parseCierre(row) {
  */
 function actual(req, res) {
   const tipo = req.query.tipo === 'general' ? 'general' : 'turno';
-  const { ult, desde } = inicioPeriodo(tipo);
+  const userId = tipo === 'turno' ? req.user.sub : null;
+  const { ult, desde } = inicioPeriodo(tipo, userId);
   const fondo = req.query.fondo !== undefined ? Number(req.query.fondo) || 0 : (ult ? ult.fondo_inicial : 0);
-  const resumen = calcular(desde, new Date().toISOString(), fondo, null);
+  const resumen = calcular(desde, new Date().toISOString(), fondo, null, userId);
   resumen.turnos_incluidos = contarTurnos(desde);
   res.json({
     tipo,
@@ -145,10 +174,11 @@ function cerrar(req, res) {
     return res.status(403).json({ error: 'Solo el administrador puede hacer el cierre general.' });
   }
   const cierre = db.transaction(() => {
-    const { desde } = inicioPeriodo(tipo);
+    const userId = tipo === 'turno' ? req.user.sub : null;
+    const { desde } = inicioPeriodo(tipo, userId);
     const ultCualquiera = ultimoCierre();
     const hasta = new Date().toISOString();
-    const resumen = calcular(desde, hasta, req.body.fondo_inicial, req.body.efectivo_contado);
+    const resumen = calcular(desde, hasta, req.body.fondo_inicial, req.body.efectivo_contado, userId);
     resumen.tipo = tipo;
     resumen.turnos_incluidos = contarTurnos(desde);
     resumen.emisor = (({ nombre_comercial, razon_social, ruc, direccion, telefono }) =>
@@ -213,8 +243,8 @@ function reporte(req, res) {
     if (!c) return res.status(404).json({ error: 'Cierre no encontrado.' });
     ({ desde, hasta } = c); userId = c.created_by; nombre = c.created_by_nombre; cerrado = true;
   } else {
-    desde = inicioPeriodo('turno').desde; hasta = new Date().toISOString();
     userId = req.user.sub; nombre = req.user.nombre;
+    desde = inicioPeriodo('turno', userId).desde; hasta = new Date().toISOString();
   }
   const habitaciones = db.prepare(`
     SELECT r.numero FROM stays s JOIN rooms r ON r.id = s.room_id
