@@ -20,6 +20,10 @@ function list(req, res) {
       s.checkin_date  AS stay_checkin,
       s.nights        AS stay_nights,
       s.created_at    AS stay_created_at,
+      s.pagado        AS stay_pagado,
+      s.metodo_pago   AS stay_metodo_pago,
+      s.noches_pagadas AS stay_noches_pagadas,
+      u.nombre        AS stay_atendido_por,
       g.nombres       AS guest_nombres,
       g.apellidos     AS guest_apellidos,
       g.tipo_documento AS guest_tipo_documento,
@@ -27,6 +31,7 @@ function list(req, res) {
     FROM rooms r
     LEFT JOIN stays s ON s.room_id = r.id AND s.estado = 'activa'
     LEFT JOIN guests g ON g.id = s.guest_id
+    LEFT JOIN users u ON u.id = s.created_by
     ORDER BY CAST(r.numero AS INTEGER)
   `).all();
 
@@ -118,6 +123,45 @@ function remove(req, res) {
 }
 
 /**
+ * Registra el cobro de una habitación: ingreso en finanzas, pagos (uno o
+ * mixto) y, si se pidió, boleta o factura. Se usa al hacer check-in (pago
+ * adelantado), al hacer check-out de estancias antiguas sin pagar y para
+ * cobrar noches adicionales. Debe llamarse dentro de una transacción.
+ */
+function cobrarHabitacion({ room, stay, guest, noches, monto, etiqueta, body, user, desde, hasta }) {
+  const pagos = normalizarPagos(body, monto); // valida el pago mixto antes de tocar nada
+  const esHora = room.unidad === 'hora';
+  const unidad = esHora ? `bloque(s) de ${room.bloque_horas || 3} h` : 'noche(s)';
+  const finance = {
+    id: newId(), fecha: today(),
+    concepto: `${etiqueta} habitación ${room.numero} — ${guest.nombres} ${guest.apellidos} (${noches} ${unidad})`.replace(/\s+\(/, ' ('),
+    tipo: 'ingreso', monto, metodo: metodoResumen(pagos),
+    referencia_estancia_id: stay.id, created_by: user.sub, created_at: nowISO(),
+  };
+  db.prepare(`
+    INSERT INTO finance (id, fecha, concepto, tipo, monto, metodo, referencia_estancia_id, created_by, created_at)
+    VALUES (@id, @fecha, @concepto, @tipo, @monto, @metodo, @referencia_estancia_id, @created_by, @created_at)
+  `).run(finance);
+  registrarPagos(db, finance.id, pagos, finance.created_at);
+
+  let comprobante = null;
+  const comp = body.comprobante;
+  if (comp && comp.tipo && comp.tipo !== 'ninguno') {
+    comprobante = emitir(db, {
+      tipo: comp.tipo,
+      cliente: comp,
+      items: [{
+        descripcion: `Hospedaje Hab. ${room.numero} (${room.categoria || room.tipo}) · ${dmy(desde)} al ${dmy(hasta)}`,
+        unidad: esHora ? 'BLOQUE' : 'NOCHE',
+        cantidad: noches, precio_unitario: stay.price_per_night, importe: monto,
+      }],
+      total: monto, pagos, recibido: body.recibido, financeId: finance.id, user,
+    });
+  }
+  return { finance, pagos, comprobante };
+}
+
+/**
  * POST /api/rooms/:id/checkin
  * Registra al huésped (con sus datos exigidos por la normativa peruana
  * de hospedaje) y abre una "estancia" para la habitación.
@@ -130,9 +174,13 @@ function checkin(req, res) {
   // huésped registrado sin estancia ni una habitación "ocupada" sin nadie.
   const resultado = db.transaction(() => checkinTx(req))();
   if (resultado.error) return res.status(resultado.status).json({ error: resultado.error });
-  const { room, guest, stay } = resultado;
+  const { room, guest, stay, cobro } = resultado;
 
   realtime.broadcast('rooms:changed', { reason: 'checkin', room_id: room.id });
+  if (cobro) {
+    realtime.broadcast('finance:changed', { reason: 'checkin' });
+    sheets.appendRow('Finanzas', [cobro.finance.fecha, cobro.finance.concepto, cobro.finance.tipo, cobro.finance.monto, cobro.pagos.map(p => `${p.metodo} ${p.monto.toFixed(2)}`).join(' + '), cobro.finance.created_at]);
+  }
   // Respaldo automático: cada huésped que hace check-in queda también
   // como una fila en la hoja de cálculo de Google (si está configurada).
   // No se espera (no "await"): si Google está lento, el check-in no se demora.
@@ -141,7 +189,12 @@ function checkin(req, res) {
     guest.nacionalidad, guest.procedencia || '', guest.destino || '', guest.telefono || '',
     room.numero, stay.checkin_date, stay.nights, stay.price_per_night, guest.created_at,
   ]);
-  res.status(201).json({ stay, guest });
+  res.status(201).json({
+    stay, guest,
+    total: cobro ? stay.total : null,
+    pagos: cobro ? cobro.pagos : [],
+    comprobante: cobro ? cobro.comprobante : null,
+  });
 }
 
 function checkinTx(req) {
@@ -193,7 +246,23 @@ function checkinTx(req) {
   `).run(stay);
 
   db.prepare('UPDATE rooms SET estado = ? WHERE id = ?').run('ocupado', room.id);
-  return { room, guest, stay };
+
+  // Pago ADELANTADO: el hostal cobra antes de que el huésped ingrese. Si la
+  // petición trae la forma de pago, se cobra aquí mismo (todo en la misma
+  // transacción: si el pago falla, no queda check-in a medias).
+  let cobro = null;
+  const traePago = (Array.isArray(req.body.pagos) && req.body.pagos.length) || req.body.metodo_pago || req.body.metodo;
+  if (traePago) {
+    const total = r2(stay.nights * stay.price_per_night);
+    cobro = cobrarHabitacion({
+      room, stay, guest, noches: stay.nights, monto: total, etiqueta: 'Pago adelantado',
+      body: req.body, user: req.user, desde: stay.checkin_date, hasta: stay.checkin_date,
+    });
+    db.prepare('UPDATE stays SET pagado = 1, noches_pagadas = ?, metodo_pago = ?, total = ? WHERE id = ?')
+      .run(stay.nights, cobro.finance.metodo, total, stay.id);
+    Object.assign(stay, { pagado: 1, noches_pagadas: stay.nights, metodo_pago: cobro.finance.metodo, total });
+  }
+  return { room, guest, stay, cobro };
 }
 
 /**
@@ -211,54 +280,49 @@ function checkout(req, res) {
     const stay = db.prepare(`SELECT * FROM stays WHERE room_id = ? AND estado = 'activa'`).get(room.id);
     if (!stay) return { status: 409, error: 'No se encontró la estancia activa de esta habitación.' };
 
-    const nightsFinales = req.body.noches_finales ? Math.max(1, parseInt(req.body.noches_finales, 10) || 1) : stay.nights;
+    const prepagada = stay.pagado === 1;
+    let nightsFinales = req.body.noches_finales ? Math.max(1, parseInt(req.body.noches_finales, 10) || 1) : stay.nights;
+    // Lo ya pagado por adelantado no se devuelve ni se reduce: como mínimo se conservan las noches pagadas.
+    if (prepagada) nightsFinales = Math.max(nightsFinales, stay.noches_pagadas);
     const total = r2(nightsFinales * stay.price_per_night);
-    const pagos = normalizarPagos(req.body, total); // valida el pago mixto antes de tocar nada
-
-    db.prepare(`UPDATE stays SET checkout_date = ?, nights = ?, total = ?, estado = 'finalizada' WHERE id = ?`)
-      .run(today(), nightsFinales, total, stay.id);
 
     const guest = db.prepare('SELECT * FROM guests WHERE id = ?').get(stay.guest_id) || { nombres: 'Huésped', apellidos: '' };
-    const esHora = room.unidad === 'hora';
-    const unidad = esHora ? `bloque(s) de ${room.bloque_horas || 3} h` : 'noche(s)';
-    const finance = {
-      id: newId(), fecha: today(),
-      concepto: `Pago habitación ${room.numero} — ${guest.nombres} ${guest.apellidos} (${nightsFinales} ${unidad})`.replace(/\s+\(/, ' ('),
-      tipo: 'ingreso', monto: total, metodo: metodoResumen(pagos),
-      referencia_estancia_id: stay.id, created_by: req.user.sub, created_at: nowISO(),
-    };
-    db.prepare(`
-      INSERT INTO finance (id, fecha, concepto, tipo, monto, metodo, referencia_estancia_id, created_by, created_at)
-      VALUES (@id, @fecha, @concepto, @tipo, @monto, @metodo, @referencia_estancia_id, @created_by, @created_at)
-    `).run(finance);
-    registrarPagos(db, finance.id, pagos, finance.created_at);
 
-    let comprobante = null;
-    const comp = req.body.comprobante;
-    if (comp && comp.tipo && comp.tipo !== 'ninguno') {
-      comprobante = emitir(db, {
-        tipo: comp.tipo,
-        cliente: comp,
-        items: [{
-          descripcion: `Hospedaje Hab. ${room.numero} (${room.categoria || room.tipo}) · ${dmy(stay.checkin_date)} al ${dmy(today())}`,
-          unidad: esHora ? 'BLOQUE' : 'NOCHE',
-          cantidad: nightsFinales, precio_unitario: stay.price_per_night, importe: total,
-        }],
-        total, pagos, recibido: req.body.recibido, financeId: finance.id, user: req.user,
+    // Qué falta por cobrar: todo (estancia antigua sin pago adelantado) o
+    // solo las noches adicionales (estancia prepagada que se extendió).
+    const nochesACobrar = prepagada ? nightsFinales - stay.noches_pagadas : nightsFinales;
+    const montoACobrar = r2(nochesACobrar * stay.price_per_night);
+
+    let cobro = null;
+    if (nochesACobrar > 0) {
+      cobro = cobrarHabitacion({
+        room, stay, guest, noches: nochesACobrar, monto: montoACobrar,
+        etiqueta: prepagada ? 'Pago adicional' : 'Pago',
+        body: req.body, user: req.user, desde: stay.checkin_date, hasta: today(),
       });
     }
 
+    db.prepare(`UPDATE stays SET checkout_date = ?, nights = ?, total = ?, estado = 'finalizada' WHERE id = ?`)
+      .run(today(), nightsFinales, total, stay.id);
     db.prepare('UPDATE rooms SET estado = ? WHERE id = ?').run('limpieza', room.id);
-    return { room, total, finance, pagos, comprobante };
+    return { room, total, cobro, prepagada };
   })();
 
   if (resultado.error) return res.status(resultado.status).json({ error: resultado.error });
-  const { room, total, finance, pagos, comprobante } = resultado;
+  const { room, total, cobro, prepagada } = resultado;
 
   realtime.broadcast('rooms:changed', { reason: 'checkout', room_id: room.id });
-  realtime.broadcast('finance:changed', { reason: 'checkout' });
-  sheets.appendRow('Finanzas', [finance.fecha, finance.concepto, finance.tipo, finance.monto, pagos.map(p => `${p.metodo} ${p.monto.toFixed(2)}`).join(' + '), finance.created_at]);
-  res.json({ total, finance, pagos, comprobante });
+  if (cobro) {
+    realtime.broadcast('finance:changed', { reason: 'checkout' });
+    sheets.appendRow('Finanzas', [cobro.finance.fecha, cobro.finance.concepto, cobro.finance.tipo, cobro.finance.monto, cobro.pagos.map(p => `${p.metodo} ${p.monto.toFixed(2)}`).join(' + '), cobro.finance.created_at]);
+  }
+  res.json({
+    total, prepagada,
+    cobrado: cobro ? cobro.finance.monto : 0,
+    finance: cobro ? cobro.finance : null,
+    pagos: cobro ? cobro.pagos : [],
+    comprobante: cobro ? cobro.comprobante : null,
+  });
 }
 
 module.exports = { list, create, update, remove, checkin, checkout };

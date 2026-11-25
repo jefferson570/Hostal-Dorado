@@ -367,6 +367,26 @@ function anularComprobante(id, codigo){
 let compBuscarTimer;
 $('#comp-buscar')?.addEventListener('input', ()=>{ clearTimeout(compBuscarTimer); compBuscarTimer = setTimeout(renderComprobantes, 300); });
 
+/* ---------- Reporte del empleado (habitaciones dadas y productos vendidos) ---------- */
+async function abrirReporte(cierreId){
+  let rp;
+  try { rp = await api('/caja/reporte' + (cierreId ? '?cierre=' + encodeURIComponent(cierreId) : '')); } catch (err) { showError(err); return; }
+  const d = new Date(rp.hasta);
+  const dia = d.toLocaleDateString('es-PE', { day:'2-digit', month:'long', year:'numeric' });
+  const hora = d.toLocaleTimeString('es-PE', { hour:'2-digit', minute:'2-digit', hour12:false });
+  openModal(`
+    <h3>Reporte de turno</h3>
+    <p class="modal-sub">Empleado: <b>${escapeHTML(rp.empleado)}</b></p>
+    <div class="field"><label>Día</label><div>${escapeHTML(dia)}</div></div>
+    <div class="field"><label>Habitaciones dadas (${rp.habitaciones.length})</label>
+      <div>${rp.habitaciones.length ? rp.habitaciones.map(n => 'Hab. ' + escapeHTML(String(n))).join(' · ') : 'Ninguna'}</div></div>
+    <div class="field"><label>Productos vendidos</label>
+      <div>${rp.productos.length ? rp.productos.map(p => `${p.cantidad} × ${escapeHTML(p.nombre)}`).join('<br>') : 'Ninguno'}</div></div>
+    <div class="field"><label>${rp.cerrado ? 'Hora de cierre' : 'Hora del reporte (turno aún abierto)'}</label><div>${hora}</div></div>
+    <div class="modal-actions"><button class="btn btn-gold" id="rp-cerrar">Cerrar</button></div>`);
+  $('#rp-cerrar').onclick = closeModal;
+}
+
 /* ---------- Cierre de caja ---------- */
 /**
  * Cierre de TURNO (recepción, al terminar su turno) o cierre GENERAL
@@ -404,6 +424,7 @@ async function abrirCierre(tipo){
     <div class="field"><label>Observaciones</label><input id="ci-obs" type="text" maxlength="300" placeholder="Opcional (ej. se retiró S/ 500 para depósito)"></div>
     <div class="modal-actions">
       <button class="btn" id="modal-cancel">Cancelar</button>
+      ${general ? '' : '<button class="btn" id="ci-reporte">Dar reporte</button>'}
       <button class="btn btn-gold" id="ci-ok">${icon('caja', 15)} ${general ? 'Hacer cierre general' : 'Cerrar caja del turno'}</button>
     </div>`, { wide: true });
 
@@ -426,6 +447,7 @@ async function abrirCierre(tipo){
   ['#ci-fondo', '#ci-contado'].forEach(s => $(s).addEventListener('input', cuadre));
   cuadre();
   $('#modal-cancel').onclick = closeModal;
+  if ($('#ci-reporte')) $('#ci-reporte').onclick = () => abrirReporte();
   $('#ci-ok').onclick = async ()=>{
     const contado = $('#ci-contado').value;
     if (general) {
@@ -454,10 +476,12 @@ async function abrirCierre(tipo){
             : d > 0 ? `<span class="pill pill-warn">Sobrante ${money(d)}</span>` : `<span class="pill pill-danger">Faltante ${money(-d)}</span>`}
           <div class="modal-actions" style="justify-content:center;">
             <button class="btn" id="ex-cerrar">Listo</button>
+            ${general ? '' : '<button class="btn" id="ex-reporte">Dar reporte</button>'}
             <button class="btn btn-gold" id="ex-imprimir">${icon('imprimir', 15)} Imprimir ticket</button>
           </div>
         </div>`);
       $('#ex-cerrar').onclick = closeModal;
+      if ($('#ex-reporte')) $('#ex-reporte').onclick = () => abrirReporte(cierre.id);
       $('#ex-imprimir').onclick = () => { imprimirCierre(cierre.id); closeModal(); };
       renderAll();
     }catch(err){ showError(err); }

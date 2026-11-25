@@ -230,6 +230,11 @@ for (const ddl of [
   // de privacidad (cuándo y qué versión) al dejar su pre-reserva.
   `ALTER TABLE reservations ADD COLUMN consentimiento_at TEXT`,
   `ALTER TABLE reservations ADD COLUMN politica_version TEXT`,
+  // Cobro por adelantado: la estancia se paga al hacer el check-in.
+  // pagado=0 en estancias antiguas (se siguen cobrando al salir).
+  `ALTER TABLE stays ADD COLUMN pagado INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE stays ADD COLUMN noches_pagadas INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE stays ADD COLUMN metodo_pago TEXT`,
 ]) {
   try { db.prepare(ddl).run(); } catch (_) { /* columna ya existente */ }
 }

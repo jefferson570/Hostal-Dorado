@@ -660,6 +660,8 @@ function roomCardHTML(r){
         <div class="rs">Ocupada</div>
         <div class="rg guest">${escapeHTML(guestName)}</div>
         <div class="rg timer" data-checkin="${r.stay_created_at || ''}">Hace --:--:--</div>
+        <div class="rg pago ${r.stay_pagado ? 'pagado' : 'pendiente'}">${r.stay_pagado ? `Pagado · ${escapeHTML(r.stay_metodo_pago || '')}` : 'Pago pendiente'}</div>
+        ${r.stay_atendido_por ? `<div class="rg atendido">Dado por ${escapeHTML(r.stay_atendido_por)}</div>` : ''}
       </div>
     </div>`;
   }
@@ -817,15 +819,17 @@ async function openRoomModal(id){
         <div class="field"><label>Motivo de viaje</label><input id="ci-motivo" type="text" placeholder="Turismo, negocios…"></div>
         <div class="field"><label>${esHora ? `Bloques de ${room.bloque_horas || 3} h` : 'Noches'}</label><input id="ci-noches" type="number" min="1" step="1" value="1"></div>
       </div>
-      <p class="modal-note" id="ci-total-note">Total estimado: <b>${money(room.precio)}</b></p>
+      <p class="modal-note">El cobro es <b>por adelantado</b>: registra aquí cómo pagó el huésped antes de ingresar.</p>
+      <div id="ci-cobro"></div>
       <div class="modal-actions">
         <button class="btn" id="modal-cancel">Cancelar</button>
-        <button class="btn btn-gold" id="modal-checkin">Confirmar check-in</button>
+        <button class="btn btn-gold" id="modal-checkin">${icon('check', 15)} Confirmar check-in y cobrar</button>
       </div>
-    `);
+    `, { wide: true });
+    const cobroCI = crearCobro($('#ci-cobro'), { total: room.precio, comprobante: 'boleta', cliente: {} });
     $('#ci-noches').addEventListener('input', ()=>{
       const n = Math.max(1, parseInt($('#ci-noches').value||'1',10));
-      $('#ci-total-note').innerHTML = `Total estimado: <b>${money(room.precio*n)}</b>`;
+      cobroCI.setTotal(room.precio*n);
     });
     $('#modal-cancel').onclick = closeModal;
     $('#ci-buscar-doc').onclick = async ()=>{
@@ -864,10 +868,17 @@ async function openRoomModal(id){
         motivo_viaje: $('#ci-motivo').value.trim(),
       };
       $('#ci-doc-error').classList.remove('show');
+      let datos;
+      try { datos = cobroCI.leer(); } catch (e) { toast(e.message, true); return; }
+      // Si la boleta va sin datos del cliente, usamos los del huésped que se está registrando.
+      if (datos.comprobante.tipo === 'boleta' && !datos.comprobante.doc && payload.numero_documento) {
+        const mapDoc = { 'DNI':'DNI', 'Pasaporte':'PAS', 'Carné de Extranjería':'CE' };
+        datos.comprobante = { ...datos.comprobante, doc_tipo: mapDoc[payload.tipo_documento] || 'DNI', doc: payload.numero_documento, nombre: datos.comprobante.nombre || `${payload.nombres} ${payload.apellidos}`.trim() };
+      }
       try{
-        await api(`/rooms/${room.id}/checkin`, { method:'POST', body: payload });
-        closeModal(); renderAll();
-        toast(`Check-in registrado — Hab. ${room.numero}`, 'success');
+        const res = await api(`/rooms/${room.id}/checkin`, { method:'POST', body: { ...payload, ...datos } });
+        renderAll();
+        mostrarCobroExitoso({ titulo: `Check-in Hab. ${room.numero} — pagado`, total: res.total, pagos: res.pagos, comprobante: res.comprobante, vuelto: res.comprobante ? res.comprobante.vuelto : (datos.recibido != null ? datos.recibido - (res.pagos.find(p=>p.metodo==='Efectivo')?.monto||0) : null) });
       }catch(err){
         const msgDoc = err.detalles?.find(d=>d.campo==='numero_documento')?.mensaje;
         if(msgDoc){ $('#ci-doc-error').textContent = msgDoc; $('#ci-doc-error').classList.add('show'); }
@@ -876,37 +887,55 @@ async function openRoomModal(id){
     };
   } else if(room.estado==='ocupado'){
     const nights = room.stay_nights || 1;
-    const total = room.precio * nights;
     const esHora = room.unidad === 'hora';
+    const prepagada = !!room.stay_pagado;
+    const unidadTxt = esHora ? `bloques de ${room.bloque_horas||3} h` : 'noches';
+    const clienteCO = { doc_tipo: room.guest_tipo_documento, doc: room.guest_numero_documento, nombre: `${room.guest_nombres||''} ${room.guest_apellidos||''}`.trim() };
     openModal(`
       <h3>Check-out — Habitación ${escapeHTML(room.numero)}</h3>
       <p class="modal-sub">${escapeHTML(room.guest_nombres||'')} ${escapeHTML(room.guest_apellidos||'')} · ${escapeHTML(room.guest_tipo_documento||'')} ${escapeHTML(room.guest_numero_documento||'')}</p>
-      <div class="field"><label>${esHora ? `Bloques de ${room.bloque_horas||3} h a cobrar` : 'Noches a cobrar'} <small class="td-sub" style="display:inline">(${money(room.precio)} c/u)</small></label><input id="co-noches" type="number" min="1" value="${nights}"></div>
+      ${prepagada
+        ? `<p class="modal-note pago-ok">${icon('check', 14)} Ya pagó por adelantado: <b>${money(room.precio*nights)}</b> (${nights} ${unidadTxt}) · ${escapeHTML(room.stay_metodo_pago||'')}${room.stay_atendido_por ? ` · recibido por ${escapeHTML(room.stay_atendido_por)}` : ''}.</p>
+           <div class="field"><label>${esHora ? 'Bloques' : 'Noches'} adicionales a cobrar <small class="td-sub" style="display:inline">(${money(room.precio)} c/u · deja 0 si no se queda más)</small></label><input id="co-noches" type="number" min="0" value="0"></div>`
+        : `<div class="field"><label>${esHora ? `Bloques de ${room.bloque_horas||3} h a cobrar` : 'Noches a cobrar'} <small class="td-sub" style="display:inline">(${money(room.precio)} c/u)</small></label><input id="co-noches" type="number" min="1" value="${nights}"></div>`}
       <div id="co-cobro"></div>
       <div class="modal-actions">
         <button class="btn" id="modal-cancel">Cancelar</button>
-        <button class="btn btn-gold" id="modal-checkout">${icon('check', 15)} Confirmar check-out y cobrar</button>
+        <button class="btn btn-gold" id="modal-checkout"></button>
       </div>
     `, { wide: true });
-    const cobro = crearCobro($('#co-cobro'), {
-      total, comprobante: 'boleta',
-      cliente: { doc_tipo: room.guest_tipo_documento, doc: room.guest_numero_documento, nombre: `${room.guest_nombres||''} ${room.guest_apellidos||''}`.trim() },
-    });
+    let cobro = null;
+    // A cobrar ahora: todo (estancia antigua sin pago adelantado) o solo lo adicional (prepagada).
+    const aCobrar = () => Math.max(prepagada ? 0 : 1, parseInt($('#co-noches').value || (prepagada ? '0' : String(nights)), 10) || 0);
+    const refrescarCO = () => {
+      const n = aCobrar();
+      const cont = $('#co-cobro');
+      if (n <= 0) { cont.innerHTML = ''; cobro = null; }
+      else if (!cobro) cobro = crearCobro(cont, { total: room.precio*n, comprobante: 'boleta', cliente: clienteCO });
+      else cobro.setTotal(room.precio*n);
+      $('#modal-checkout').innerHTML = n > 0
+        ? `${icon('check', 15)} Confirmar check-out y cobrar`
+        : `${icon('check', 15)} Confirmar salida (ya está pagado)`;
+    };
+    refrescarCO();
     $('#modal-cancel').onclick = closeModal;
-    $('#co-noches').addEventListener('input', ()=>{
-      const n = Math.max(1, parseInt($('#co-noches').value||'1',10));
-      cobro.setTotal(room.precio*n);
-    });
+    $('#co-noches').addEventListener('input', refrescarCO);
     $('#modal-checkout').onclick = async ()=>{
-      let datos;
-      try { datos = cobro.leer(); } catch (e) { toast(e.message, true); return; }
+      let datos = {};
+      if (cobro) { try { datos = cobro.leer(); } catch (e) { toast(e.message, true); return; } }
+      const extra = aCobrar();
       try{
         const res = await api(`/rooms/${room.id}/checkout`, {
           method:'POST',
-          body:{ noches_finales: parseInt($('#co-noches').value||String(nights),10), ...datos },
+          body:{ noches_finales: prepagada ? nights + extra : extra, ...datos },
         });
         renderAll();
-        mostrarCobroExitoso({ titulo: `Check-out Hab. ${room.numero}`, total: res.total, pagos: res.pagos, comprobante: res.comprobante, vuelto: res.comprobante ? res.comprobante.vuelto : (datos.recibido != null ? datos.recibido - (res.pagos.find(p=>p.metodo==='Efectivo')?.monto||0) : null) });
+        if (res.finance) {
+          mostrarCobroExitoso({ titulo: `Check-out Hab. ${room.numero}${prepagada ? ' — cobro adicional' : ''}`, total: res.cobrado, pagos: res.pagos, comprobante: res.comprobante, vuelto: res.comprobante ? res.comprobante.vuelto : (datos.recibido != null ? datos.recibido - (res.pagos.find(p=>p.metodo==='Efectivo')?.monto||0) : null) });
+        } else {
+          closeModal();
+          toast(`Salida registrada — Hab. ${room.numero} (ya estaba pagada)`, 'success');
+        }
       }catch(err){ showError(err); }
     };
   } else {

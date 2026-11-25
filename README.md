@@ -337,6 +337,16 @@ sección **Huéspedes** y en el reporte de Excel.
 
 ---
 
+### Cobro por adelantado (pago al ingresar)
+
+El hostal cobra **antes** de que el huésped ingrese, así que el cobro se hace en el **check-in**: el formulario pide la forma de pago (Efectivo, Yape, Plin, Tarjeta, Transferencia o pago mixto) y, si se quiere, emite la boleta o factura en ese momento. La tarjeta de cada habitación ocupada muestra **"Pagado · método"** y **"Dado por <empleado>"** (quien hizo el check-in y recibió el pago).
+
+- En el **check-out** de una estancia ya pagada no se cobra de nuevo: solo se confirma la salida. Si el huésped se quedó más tiempo, se ingresan los bloques/noches adicionales y se cobran en ese momento.
+- Lo pagado por adelantado no se devuelve ni se reduce desde el sistema.
+- Las estancias que ya estaban abiertas antes de este cambio siguen mostrando "Pago pendiente" y se cobran al salir, como antes.
+
+---
+
 ## 7. Exportar todo a Excel
 
 El botón **"⬇ Exportar Excel"** (arriba a la derecha, disponible para ambos

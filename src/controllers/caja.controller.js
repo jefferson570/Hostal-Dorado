@@ -199,4 +199,35 @@ function get(req, res) {
   res.json({ cierre: c });
 }
 
-module.exports = { actual, cerrar, list, get, calcular };
+/**
+ * GET /api/caja/reporte[?cierre=<id>] — reporte simple de UN empleado:
+ * qué habitaciones dio (check-ins que hizo) y qué productos vendió.
+ *   - Sin `cierre`: el turno actual del empleado que lo pide (hasta ahora).
+ *   - Con `cierre`: el turno ya cerrado (cubre desde/hasta de ese cierre y
+ *     es del empleado que lo cerró), con la hora a la que se cerró.
+ */
+function reporte(req, res) {
+  let desde, hasta, userId, nombre, cerrado = false;
+  if (req.query.cierre) {
+    const c = db.prepare('SELECT * FROM cierres_caja WHERE id = ?').get(req.query.cierre);
+    if (!c) return res.status(404).json({ error: 'Cierre no encontrado.' });
+    ({ desde, hasta } = c); userId = c.created_by; nombre = c.created_by_nombre; cerrado = true;
+  } else {
+    desde = inicioPeriodo('turno').desde; hasta = new Date().toISOString();
+    userId = req.user.sub; nombre = req.user.nombre;
+  }
+  const habitaciones = db.prepare(`
+    SELECT r.numero FROM stays s JOIN rooms r ON r.id = s.room_id
+    WHERE s.created_by = ? AND s.created_at > ? AND s.created_at <= ?
+    ORDER BY s.created_at ASC
+  `).all(userId, desde, hasta).map(x => x.numero);
+  const productos = db.prepare(`
+    SELECT i.nombre, SUM(m.cantidad) AS cantidad
+    FROM inventory_movements m JOIN inventory i ON i.id = m.producto_id
+    WHERE m.tipo = 'venta' AND m.created_by = ? AND m.created_at > ? AND m.created_at <= ?
+    GROUP BY i.id ORDER BY i.nombre
+  `).all(userId, desde, hasta);
+  res.json({ empleado: nombre, desde, hasta, cerrado, habitaciones, productos });
+}
+
+module.exports = { actual, cerrar, list, get, calcular, reporte };

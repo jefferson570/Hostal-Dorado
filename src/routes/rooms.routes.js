@@ -69,7 +69,7 @@ const checkinValidators = [
   body('noches').isInt({ min: 1, max: 365 }).withMessage('El número de noches debe estar entre 1 y 365.'),
 ];
 
-router.post('/:id/checkin', requireRole('admin', 'recepcion'), checkinValidators, validate, ctrl.checkin);
+router.post('/:id/checkin', requireRole('admin', 'recepcion'), [...checkinValidators, ...validarCobro], validate, ctrl.checkin);
 
 router.post('/:id/checkout',
   requireRole('admin', 'recepcion'),

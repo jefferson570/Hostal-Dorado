@@ -4,7 +4,7 @@
  * Todas requieren sesión; lo delicado es solo para administrador.
  */
 const express = require('express');
-const { body, param } = require('express-validator');
+const { body, param, query } = require('express-validator');
 const validate = require('../middleware/validate');
 const { requireAuth, requireRole } = require('../middleware/auth');
 const caja = require('../controllers/caja.controller');
@@ -22,6 +22,7 @@ cajaRouter.use(requireAuth);
 cajaRouter.get('/actual', caja.actual);
 cajaRouter.get('/cierres', caja.list);
 cajaRouter.get('/cierres/:id', [idParam], validate, caja.get);
+cajaRouter.get('/reporte', [query('cierre').optional().isUUID().withMessage('Identificador inválido.')], validate, caja.reporte);
 cajaRouter.post('/cerrar',
   requireRole('admin', 'recepcion'),
   [
